@@ -1,4 +1,10 @@
 #include "systemcalls.h"
+#include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/wait.h>
+#include <errno.h>
+#include <string.h>
 
 /**
  * @param cmd the command to execute with system()
@@ -9,15 +15,15 @@
 */
 bool do_system(const char *cmd)
 {
+	bool ret = true;
+	
+	if (system(cmd) < 0)
+	{
+		ret = false;
+		perror("system");
+	}
 
-/*
- * TODO  add your code here
- *  Call the system() function with the command set in the cmd
- *   and return a boolean true if the system() call completed with success
- *   or false() if it returned a failure
-*/
-
-    return true;
+	return ret;
 }
 
 /**
@@ -47,21 +53,40 @@ bool do_exec(int count, ...)
     command[count] = NULL;
     // this line is to avoid a compile warning before your implementation is complete
     // and may be removed
-    command[count] = command[count];
+    //command[count] = command[count];
 
-/*
- * TODO:
- *   Execute a system command by calling fork, execv(),
- *   and wait instead of system (see LSP page 161).
- *   Use the command[0] as the full path to the command to execute
- *   (first argument to execv), and use the remaining arguments
- *   as second argument to the execv() command.
- *
-*/
+    bool ret = false;
+    int pid = fork();
+
+    if (pid == 0) // Fork success: In Child Process
+    {
+	    if (execv(command[0], command) < 0)
+	    {
+		    printf("***ERROR: execv failed with return value -1\n");
+		    perror("execv");
+	    }
+	    exit(1); // Only executed if execv fails
+    }
+    else if (pid > 0) // Parent Process: Wait for Child
+    {
+	    int status;
+	    if (wait(&status) < 0)
+	    {
+		    printf("***ERROR: wait failed with return value -1\n");
+		    perror("wait");
+	    }
+	    ret = (WEXITSTATUS(status) == 0); // status 0 means it was successful
+    }
+    else // Fork failed
+    {
+	    ret = false;
+	    printf("***ERROR: fork failed with return value -1\n");
+	    perror("fork");
+    }
 
     va_end(args);
-
-    return true;
+    
+    return ret;
 }
 
 /**
@@ -82,18 +107,53 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
     command[count] = NULL;
     // this line is to avoid a compile warning before your implementation is complete
     // and may be removed
-    command[count] = command[count];
+    //command[count] = command[count];
 
-
-/*
- * TODO
- *   Call execv, but first using https://stackoverflow.com/a/13784315/1446624 as a refernce,
- *   redirect standard out to a file specified by outputfile.
- *   The rest of the behaviour is same as do_exec()
- *
-*/
+    bool ret = false;
+    int fd = open(outputfile, O_WRONLY|O_TRUNC|O_CREAT, 0644);
+    int pid = (fd < 0) ? -1 : fork();
+    
+    if (pid == 0) // Fork success: In Child Process
+    {
+	    if (dup2(fd, 1) < 0) // Duplicate file descriptor to stdout
+	    {
+		    printf("***ERROR: dup2 failed with return value -1\n");
+		    perror("dup2");
+	    }
+	    if (execv(command[0], command) < 0)
+	    {
+		    printf("***ERROR: execv failed with return value -1\n");
+		    perror("execv");
+	    }
+	    close(fd); // Closing file, no longer needed
+	    exit(1); // Only executed if execv fails
+    }
+    else if (pid > 0) // Parent Process: Wait for Child
+    {
+	    int status;
+	    close(fd); // Closing file, no longer needed
+	    if (wait(&status) < 0)
+	    {
+		    printf("***ERROR: wait failed with return value -1\n");
+		    perror("wait");
+	    }
+	    ret = (WEXITSTATUS(status) == 0); // status 0 means it was successful
+    }
+    else // Fork or Open failed
+    {
+	    if (fd < 0)
+	    {
+		    printf("***ERROR: open failed with return value -1\n");
+		    perror("open");
+	    }
+	    else
+	    {
+		    printf("***ERROR: fork failed with return value -1\n");
+		    perror("fork");
+	    }
+    }
 
     va_end(args);
 
-    return true;
+    return ret;
 }
