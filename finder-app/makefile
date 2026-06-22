@@ -1,4 +1,6 @@
 
+CROSS_COMPILE ?=
+
 SRC_DIR = .
 INC_DIR = .
 APP_DIR = .
@@ -10,13 +12,9 @@ OBJS = $(SRCS:.c=.o)
 
 APP = $(APP_DIR)/writer
 
-CC = gcc
+CC = $(CROSS_COMPILE)gcc
 
 CFLAGS = -g -Wall
-
-ifdef CROSS_COMPILE
-	CC = $(CROSS_COMPILE)
-endif
 
 %.o : %.c
 	$(CC) $(CFLAGS) -c $< $(INCLUDES) -o $@
