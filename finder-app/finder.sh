@@ -24,7 +24,7 @@ for item in $filesdir/*
 do
 	if [ ! -d "$item" ]
 	then
-		let linescount=linescount+$(grep "${searchstr}" "$item" -c)
+		linescount=$((linescount + $(grep "${searchstr}" "$item" -c)))
 	fi
 done
 
