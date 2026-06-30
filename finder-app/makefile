@@ -19,8 +19,10 @@ CFLAGS = -g -Wall
 %.o : %.c
 	$(CC) $(CFLAGS) -c $< $(INCLUDES) -o $@
 
-.PHONY: make
-make: $(OBJS)
+.DEFAULT_GOAL := all
+
+.PHONY: all
+all: $(OBJS)
 	$(CC) $(CFLAGS) $(OBJS) -o $(APP)
 
 .PHONY: clean
